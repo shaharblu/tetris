@@ -795,16 +795,18 @@ proc		CLEAR_FULL_ROWS
 	add si,20
 	
 	mov cx,20
-	mov di,0		;counter in negative
+	mov di,0		;counter
 clear_full_rows_l:
-	
-	cmp [byte bx+1],-1
-	jne clear_not_full
-	mov [byte si], 0
-	inc di
-clear_not_full:
+
+	cmp [byte si+1],1
 	mov ax,[bx]
 	mov [bx+di],ax
+	jne clear_not_full
+	mov [byte si+1], 0
+	inc di
+	
+clear_not_full:
+	
 	;cmp di,0
 	;je not_prev_full
 	;mov [byte bx],0
