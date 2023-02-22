@@ -1,18 +1,18 @@
-IDEAL 
+IDEAL
 MODEL small
 STACK 100h
 DATASEG
 
-SCCORE_TEXT db 'score: 0$'
+SCCORE_TEXT db 'score: 00$'
 SHAPE dw 4 dup (?)
 HIDDEN_SHAPE dw 4 dup (?)
-NEXT_SHAPE dw 4 dup (?)
 ARR db 20 dup (00h)
 FULL_ROW db 20 dup (0)
 COLOR dw ?
 BORDER_START dw 0ah
 BORDER_END dw 12h
 SCORE dw 0h
+DIVISOR_TABLE db 10,1,0
 
 
 
@@ -397,19 +397,7 @@ proc		RANDOM_SHAPE
 	push cx
 	push dx
 	push si
-	mov si,offset SHAPE
-	mov bx,offset NEXT_SHAPE
-	mov cx,4
-random_shape_l:
-	mov ax,[bx]
-	mov [si],ax
-	add si,2
-	add bx,2
-	dec cx
-	cmp cx,0
-	jne random_shape_l
-	
-	mov bx,offset NEXT_SHAPE
+	mov bx,offset SHAPE
 re:
 	mov ah,2ch		;get time for random number
 	int 21h
@@ -792,7 +780,7 @@ not_full:
 endp		CHECK_FULL_ROWS
 ;-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 proc		CLEAR_FULL_ROWS										
-	mov bp, sp													;ret - in FULL_ROWS which rows are full
+	mov bp, sp
 	push bp
 	
 	push ax
@@ -809,14 +797,14 @@ proc		CLEAR_FULL_ROWS
 	mov cx,20
 	mov di,0		;counter in negative
 clear_full_rows_l:
-	mov ax,[bx]
-	mov [bx+di],ax
+	
 	cmp [byte bx+1],-1
 	jne clear_not_full
 	mov [byte si], 0
 	inc di
 clear_not_full:
-	
+	mov ax,[bx]
+	mov [bx+di],ax
 	;cmp di,0
 	;je not_prev_full
 	;mov [byte bx],0
@@ -848,6 +836,8 @@ proc		UPDATE_SCORE
 	push dx
 	push si
 	
+	mov cx,2
+update_l:
 	mov dx,8h			;print backspace
 	mov ah,2
 	int 21h
@@ -860,11 +850,16 @@ proc		UPDATE_SCORE
 	mov ah,2
 	int 21h
 	
-	mov dx,[SCORE]		;print score
-	add dx,'0'
-	mov ah,2
-	int 21h
+	dec cx
+	cmp cx,0
+	jne update_l
 	
+	;mov dx,[SCORE]		;print score
+	;add dx,'0'
+	;mov ah,2
+	;int 21h
+	mov ax,[SCORE]
+	call PRINT_NUMBER
 	
 	pop si
 	pop dx
@@ -876,7 +871,37 @@ proc		UPDATE_SCORE
 	ret
 endp		UPDATE_SCORE
 ;-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
+proc PRINT_NUMBER
+	push ax
+	push bx
+	push dx
+	mov bx,offset DIVISOR_TABLE
+nextDigit:
+	xor ah,ah
+	div [byte ptr bx] ;al = quotient, ah = remainder
+	add al,'0'
+	call PRINT_CHARACTER ;Display the quotient
+	mov al,ah ;al = ah = remainder
+	add bx,1 ;bx = address of next divisor
+	cmp [byte ptr bx],0 ;Have all divisors been done?
+	jne nextDigit
+	pop dx
+	pop bx	
+	pop ax
+	ret
+endp PRINT_NUMBER
+;-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+proc PRINT_CHARACTER
+	push ax
+	push dx
+	mov ah,2
+	mov dl, al
+	int 21h
+	pop dx
+	pop ax
+	ret
+endp PRINT_CHARACTER
+;-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 start:
 	mov ax, @data
 	mov ds, ax
@@ -945,7 +970,6 @@ col:
 	call UPDATE_SCORE
 	
 	jmp l2
-
 exit:
 	mov ax, 4c00h
 	int 21h
